@@ -34,14 +34,15 @@ function sendDiscordWebhook(message) {
 function check() {
     const currentBalance = parseFloat(document.getElementById("arciogainedcoins").innerHTML) || 0;
     const currentmultipliers = parseFloat(document.getElementById("totalMultiplier").innerHTML) || 0;
+    const currentTime = document.getElementById("sessionDuration").innerHTML || 0;
 
     if (currentBalance !== previousBalance) {
-        const message = `=====================\nAFK: ${previousBalance} -> ${currentBalance} XPL\nCurrent Multipliers: ${currentmultipliers}`;
+        const message = `=====================\nAFK: ${previousBalance} -> ${currentBalance} XPL\nCurrent Multipliers: ${currentmultipliers}\nAFK Time: ${currentTime}`;
         console.log(message);
         sendDiscordWebhook(message);
         previousBalance = currentBalance;
     }
 }
 
-setInterval(check, 15000);
+setInterval(check, 5000);
 })();
