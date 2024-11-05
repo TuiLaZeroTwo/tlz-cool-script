@@ -4,17 +4,15 @@
 // @version      2024-10-20
 // @description  try to take over the world!
 // @author       tlzytb
-// @match        https://client.plutonodes.net/afk
+// @match        https://frac.gg/afk
 // @icon         data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==
 // @grant        none
 // ==/UserScript==
 
 (function() {
-    'use strict';
     // afk check
-const discordWebhookUrl = '';
+const discordWebhookUrl = 'https://discord.com/api/webhooks/1283057585494298744/2Y7MJmZHBZbbKBZxfRVjGKEI1JaslSnIy6i17kr9nZ7blWXgM27we6jBgm4PhAwFacFb';
 
-let previousBalance = 0;
 function sendDiscordWebhook(message) {
     fetch(discordWebhookUrl, {
         method: 'POST',
@@ -32,16 +30,17 @@ function sendDiscordWebhook(message) {
 }
 
 function check() {
-    const currentBalance = parseFloat(document.getElementById("arciogainedcoins").innerHTML) || 0;
-    const currentmultipliers = parseFloat(document.getElementById("totalMultiplier").innerHTML) || 0;
-    const currentTime = document.getElementById("sessionDuration").innerHTML || 0;
-
-    if (currentBalance !== previousBalance) {
-        const message = `=====================\nAFK: ${previousBalance} -> ${currentBalance} XPL\nCurrent Multipliers: ${currentmultipliers}\nAFK Time: ${currentTime}`;
-        console.log(message);
-        sendDiscordWebhook(message);
-        previousBalance = currentBalance;
-    }
+  const currentTimeStr = document.getElementById("timeActive").innerHTML;
+  const earningRateStr = document.getElementById("earningRate").innerHTML;
+  const [minutesStr, secondsStr] = currentTimeStr.split(' ');
+  const minutes = parseInt(minutesStr.slice(0, -1));
+  const seconds = parseInt(secondsStr.slice(0, -1));
+  const totalMinutes = minutes + seconds / 60;
+  const earningRate = parseFloat(earningRateStr);
+  const totalEarnings = totalMinutes * earningRate;
+  const message = `=====================\nAFK Time: ${currentTimeStr}\nEarning Rate: ${earningRateStr}\nTotal Earnings: ${totalEarnings}`;
+  console.log(message);
+  sendDiscordWebhook(message);
 }
 
 setInterval(check, 5000);
