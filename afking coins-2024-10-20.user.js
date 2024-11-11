@@ -31,8 +31,17 @@ function sendD(embed) {
     });
   }
 
-let isConnected = true;
-
+let isConnected = false;
+window.addEventListener('unload', () => {
+    if (!isConnected) {
+      isConnected = true;
+      sendD({
+        title: "Disconnected!",
+        color: 0xff0000,
+        description: `Your total earnings: i dont know  ~-~`
+      });
+    }
+  });
 function check() {
     //check function
     const currentTimeStr = document.getElementById("timeActive").innerHTML;
@@ -54,17 +63,8 @@ function check() {
       ],
       timestamp: new Date(),
     };
-    //Disconnected check
-    window.addEventListener('unload', () => {
-    if (isConnected) {
-      isConnected = false;
-      sendD({
-        title: "Disconnected",
-        color: 0xff0000,
-        description: `Total coins earned ${totalEarnings.toFixed(2)} Frac`
-      });
-    }
-  });
+
+
     //credit
     const message = `say hi to tlz`;
     console.log(message);
