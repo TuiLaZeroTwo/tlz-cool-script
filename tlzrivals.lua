@@ -1,4 +1,4 @@
-script_key = "" -- script: tlz-rivals.lua
+script_key = "032z8ngz4d7864g1cx73p41b6ylpdl0z" -- script: tlz-rivals.lua
 --[[
 
     This script is protected with
