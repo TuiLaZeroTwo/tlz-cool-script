@@ -10,11 +10,11 @@ local FakeFloor = nil
 
 -- UI Creation
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-ScreenGui.Name = "GeminiAggressiveMenu"
+ScreenGui.Name = "GeminiCelestialMenu"
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 200, 0, 220)
+MainFrame.Size = UDim2.new(0, 200, 0, 270) -- Increased size for new button
 MainFrame.Position = UDim2.new(0.1, 0, 0.3, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainFrame.Active = true
@@ -46,29 +46,41 @@ end
 local GodBtn = createBtn("Toggle God (Aggressive)", UDim2.new(0, 10, 0, 40), Color3.fromRGB(60, 60, 60))
 local NoclipBtn = createBtn("Noclip: OFF", UDim2.new(0, 10, 0, 85), Color3.fromRGB(180, 40, 40))
 local TPBtn = createBtn("Get Click TP Tool", UDim2.new(0, 10, 0, 130), Color3.fromRGB(0, 100, 180))
-local ResetBtn = createBtn("Reset Character", UDim2.new(0, 10, 0, 175), Color3.fromRGB(40, 40, 40))
+local CelestialBtn = createBtn("Teleport: Celestial", UDim2.new(0, 10, 0, 175), Color3.fromRGB(100, 50, 150)) -- Purple button
+local ResetBtn = createBtn("Reset Character", UDim2.new(0, 10, 0, 220), Color3.fromRGB(40, 40, 40))
+
+--- CELESTIAL TELEPORT LOGIC ---
+CelestialBtn.MouseButton1Click:Connect(function()
+    local targetName = "Celestial"
+    local target = workspace:FindFirstChild(targetName, true) -- The 'true' allows it to search inside folders
+    
+    if target and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local pos = target:IsA("BasePart") and target.Position or target:FindFirstChildWhichIsA("BasePart").Position
+        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(pos) + Vector3.new(0, 5, 0)
+    else
+        CelestialBtn.Text = "Area Not Found!"
+        task.wait(1)
+        CelestialBtn.Text = "Teleport: Celestial"
+    end
+end)
 
 --- AGGRESSIVE ANTI-DEATH CORE ---
 RunService.RenderStepped:Connect(function()
     if GodMode and LocalPlayer.Character then
         local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         if humanoid then
-            -- Spams state enable to fight server-side death triggers
             humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-            
             if humanoid.Health <= 0.1 then
                 humanoid.Health = 100
                 humanoid:ChangeState(Enum.HumanoidStateType.Running)
             end
-            
-            -- Constantly forces health to a high value
             humanoid.MaxHealth = 9e9
             humanoid.Health = 9e9
         end
     end
 end)
 
---- BUTTON FUNCTIONS ---
+--- BUTTON FUNCTIONS (God, Noclip, TP) ---
 GodBtn.MouseButton1Click:Connect(function()
     GodMode = not GodMode
     StatusLabel.Text = "GOD STATUS: " .. (GodMode and "ACTIVE (SPAMMING)" or "INACTIVE")
@@ -82,12 +94,11 @@ NoclipBtn.MouseButton1Click:Connect(function()
     NoclipBtn.BackgroundColor3 = Noclip and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(180, 40, 40)
     
     if Noclip then
-        FakeFloor = Instance.new("Part")
+        FakeFloor = Instance.new("Part", workspace)
         FakeFloor.Name = "SafetyFloor"
         FakeFloor.Size = Vector3.new(12, 1, 12)
         FakeFloor.Transparency = 1
         FakeFloor.Anchored = true
-        FakeFloor.Parent = workspace
     else
         if FakeFloor then FakeFloor:Destroy() FakeFloor = nil end
     end
