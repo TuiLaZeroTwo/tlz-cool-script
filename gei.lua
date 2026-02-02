@@ -1,66 +1,128 @@
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
--- UI Setup
+-- Variables
+local GodMode = false
+local Noclip = false
+local FakeFloor = nil
+
+-- UI Creation
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-ScreenGui.Name = "ClickTP_Menu"
+ScreenGui.Name = "GeminiMobileMenu"
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 160, 0, 100)
-MainFrame.Position = UDim2.new(0.1, 0, 0.4, 0)
+MainFrame.Size = UDim2.new(0, 200, 0, 220)
+MainFrame.Position = UDim2.new(0.1, 0, 0.3, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
-MainFrame.Draggable = true -- Mobile draggable support
+MainFrame.Draggable = true 
 
 local Corner = Instance.new("UICorner", MainFrame)
 
-local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "TP Menu"
-Title.TextColor3 = Color3.new(1, 1, 1)
-Title.BackgroundTransparency = 1
-Title.Font = Enum.Font.SourceSansBold
+local StatusLabel = Instance.new("TextLabel", MainFrame)
+StatusLabel.Size = UDim2.new(1, 0, 0, 30)
+StatusLabel.Text = "Status: God OFF"
+StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Font = Enum.Font.SourceSansBold
+StatusLabel.TextSize = 14
 
-local GetToolBtn = Instance.new("TextButton", MainFrame)
-GetToolBtn.Size = UDim2.new(0, 140, 0, 40)
-GetToolBtn.Position = UDim2.new(0, 10, 0, 40)
-GetToolBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-GetToolBtn.Text = "Get TP Tool"
-GetToolBtn.TextColor3 = Color3.new(1, 1, 1)
-GetToolBtn.Font = Enum.Font.SourceSansBold
-Instance.new("UICorner", GetToolBtn)
+local function createBtn(text, pos, color)
+    local b = Instance.new("TextButton", MainFrame)
+    b.Size = UDim2.new(0, 180, 0, 40)
+    b.Position = pos
+    b.Text = text
+    b.BackgroundColor3 = color
+    b.TextColor3 = Color3.new(1, 1, 1)
+    b.Font = Enum.Font.SourceSansBold
+    b.TextSize = 16
+    Instance.new("UICorner", b)
+    return b
+end
 
--- Minimize Button
-local MinBtn = Instance.new("TextButton", ScreenGui)
-MinBtn.Size = UDim2.new(0, 40, 0, 40)
-MinBtn.Position = UDim2.new(0, 10, 0.5, 0)
-MinBtn.Text = "TP"
-MinBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-MinBtn.TextColor3 = Color3.new(1, 1, 1)
-Instance.new("UICorner", MinBtn)
+local GodBtn = createBtn("Toggle Anti-Death", UDim2.new(0, 10, 0, 40), Color3.fromRGB(70, 70, 70))
+local NoclipBtn = createBtn("Noclip: OFF", UDim2.new(0, 10, 0, 85), Color3.fromRGB(200, 50, 50))
+local TPBtn = createBtn("Get Click TP Tool", UDim2.new(0, 10, 0, 130), Color3.fromRGB(0, 120, 200))
+local ResetBtn = createBtn("Reset Character", UDim2.new(0, 10, 0, 175), Color3.fromRGB(50, 50, 50))
 
-MinBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
-
---- TOOL CREATION ---
-GetToolBtn.MouseButton1Click:Connect(function()
-    if LocalPlayer.Backpack:FindFirstChild("Click TP") then return end
+--- ANTI-DEATH LOGIC ---
+local function ApplyAntiDeath(character)
+    local humanoid = character:WaitForChild("Humanoid")
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
     
-    local TPTool = Instance.new("Tool")
-    TPTool.Name = "Click TP"
-    TPTool.RequiresHandle = false
-    TPTool.Parent = LocalPlayer.Backpack
-
-    TPTool.Activated:Connect(function()
-        local pos = Mouse.Hit.p
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            -- Teleports slightly above the point to avoid getting stuck in the floor
-            char.HumanoidRootPart.CFrame = CFrame.new(pos) + Vector3.new(0, 3, 0)
+    RunService.Stepped:Connect(function()
+        if GodMode and humanoid and humanoid.Parent then
+            if humanoid.Health <= 0 then
+                humanoid.Health = 100
+                humanoid:ChangeState(Enum.HumanoidStateType.Running)
+            end
+            humanoid.MaxHealth = 1000000
+            humanoid.Health = 1000000
         end
     end)
+end
+
+if LocalPlayer.Character then ApplyAntiDeath(LocalPlayer.Character) end
+LocalPlayer.CharacterAdded:Connect(ApplyAntiDeath)
+
+--- BUTTON FUNCTIONALITY ---
+GodBtn.MouseButton1Click:Connect(function()
+    GodMode = not GodMode
+    StatusLabel.Text = "Status: God " .. (GodMode and "ACTIVE" or "OFF")
+    StatusLabel.TextColor3 = GodMode and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+    GodBtn.BackgroundColor3 = GodMode and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(70, 70, 70)
+end)
+
+NoclipBtn.MouseButton1Click:Connect(function()
+    Noclip = not Noclip
+    NoclipBtn.Text = "Noclip: " .. (Noclip and "ON" or "OFF")
+    NoclipBtn.BackgroundColor3 = Noclip and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+    
+    if Noclip then
+        FakeFloor = Instance.new("Part")
+        FakeFloor.Name = "NoclipFloor"
+        FakeFloor.Size = Vector3.new(15, 1, 15)
+        FakeFloor.Transparency = 1
+        FakeFloor.CanCollide = true
+        FakeFloor.Anchored = true
+        FakeFloor.Parent = workspace
+    else
+        if FakeFloor then FakeFloor:Destroy() FakeFloor = nil end
+    end
+end)
+
+TPBtn.MouseButton1Click:Connect(function()
+    if LocalPlayer.Backpack:FindFirstChild("Click TP") then return end
+    local Tool = Instance.new("Tool")
+    Tool.Name = "Click TP"
+    Tool.RequiresHandle = false
+    Tool.Parent = LocalPlayer.Backpack
+    Tool.Activated:Connect(function()
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(Mouse.Hit.p) + Vector3.new(0, 3, 0)
+        end
+    end)
+end)
+
+ResetBtn.MouseButton1Click:Connect(function()
+    if LocalPlayer.Character then LocalPlayer.Character:BreakJoints() end
+end)
+
+--- NO-FALL / NOCLIP LOOP ---
+RunService.Stepped:Connect(function()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    
+    if Noclip then
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+        if FakeFloor and hrp then
+            FakeFloor.CFrame = hrp.CFrame * CFrame.new(0, -3.5, 0)
+        end
+    end
 end)
