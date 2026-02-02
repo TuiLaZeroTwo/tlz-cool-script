@@ -6,10 +6,16 @@ local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local rootPart = character:WaitForChild("HumanoidRootPart")
 
--- UI Elements
+-- SAFETY CHECK: Wait for UI elements to exist
 local gui = script.Parent
-local mainPanel = gui:WaitForChild("MainPanel")
-local logoButton = gui:WaitForChild("LogoButton")
+local mainPanel = gui:WaitForChild("MainPanel", 10)
+local logoButton = gui:WaitForChild("LogoButton", 10)
+
+if not mainPanel or not logoButton then
+	warn("GUI elements not found! Check your names in the Explorer.")
+	return
+end
+
 local flightBtn = mainPanel:WaitForChild("FlightToggle")
 local noclipBtn = mainPanel:WaitForChild("NoclipToggle")
 local minBtn = mainPanel:WaitForChild("MinButton")
@@ -19,7 +25,7 @@ local FLYING = false
 local NOCLIP = false
 local FLY_SPEED = 50
 
--- Physics Setup for Flight
+-- Physics Setup
 local attachment = Instance.new("Attachment")
 local linearVelocity = Instance.new("LinearVelocity")
 local alignOrientation = Instance.new("AlignOrientation")
@@ -54,16 +60,11 @@ end
 -- Noclip Logic
 local function toggleNoclip()
 	NOCLIP = not NOCLIP
-	if NOCLIP then
-		noclipBtn.Text = "Noclip: ON"
-		noclipBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
-	else
-		noclipBtn.Text = "Noclip: OFF"
-		noclipBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
-	end
+	noclipBtn.Text = NOCLIP and "Noclip: ON" or "Noclip: OFF"
+	noclipBtn.BackgroundColor3 = NOCLIP and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 100, 100)
 end
 
--- GUI Button Connections
+-- GUI Interactivity (Heart Buttons)
 minBtn.Activated:Connect(function()
 	mainPanel.Visible = false
 	logoButton.Visible = true
@@ -77,14 +78,11 @@ end)
 flightBtn.Activated:Connect(toggleFlight)
 noclipBtn.Activated:Connect(toggleNoclip)
 
--- The Main Loop (Handles Flight & Noclip)
+-- Loops
 RunService.Stepped:Connect(function()
-	if not character or not character:Parent() then return end
-	
-	-- Handle Noclip (Must run every frame)
-	if NOCLIP then
+	if NOCLIP and character then
 		for _, part in pairs(character:GetDescendants()) do
-			if part:IsA("BasePart") and part.CanCollide then
+			if part:IsA("BasePart") then
 				part.CanCollide = false
 			end
 		end
@@ -94,12 +92,10 @@ end)
 RunService.RenderStepped:Connect(function()
 	if FLYING then
 		local camera = workspace.CurrentCamera
-		local moveDirection = humanoid.MoveDirection
-		
 		linearVelocity.MaxForce = math.huge
 		alignOrientation.MaxTorque = math.huge
 		
-		if moveDirection.Magnitude > 0 then
+		if humanoid.MoveDirection.Magnitude > 0 then
 			linearVelocity.VectorVelocity = camera.CFrame.LookVector * FLY_SPEED
 		else
 			linearVelocity.VectorVelocity = Vector3.new(0, 0, 0)
