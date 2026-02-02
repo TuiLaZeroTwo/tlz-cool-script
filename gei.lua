@@ -5,6 +5,7 @@ local LocalPlayer = Players.LocalPlayer
 -- Variables
 local GodMode = false
 local Noclip = false
+local FakeFloor = nil
 
 -- UI Creation
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
@@ -46,34 +47,56 @@ NoclipBtn.MouseButton1Click:Connect(function()
     Noclip = not Noclip
     NoclipBtn.Text = "Noclip: " .. (Noclip and "ON" or "OFF")
     NoclipBtn.BackgroundColor3 = Noclip and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
-end)
-
-ResetBtn.MouseButton1Click:Connect(function()
-    if LocalPlayer.Character then
-        LocalPlayer.Character:BreakJoints()
+    
+    -- Handle Invisible Floor creation/deletion
+    if Noclip then
+        FakeFloor = Instance.new("Part")
+        FakeFloor.Name = "NoclipFloor"
+        FakeFloor.Size = Vector3.new(10, 1, 10)
+        FakeFloor.Transparency = 1
+        FakeFloor.CanCollide = true
+        FakeFloor.Anchored = true
+        FakeFloor.Parent = workspace
+    else
+        if FakeFloor then
+            FakeFloor:Destroy()
+            FakeFloor = nil
+        end
     end
 end)
 
--- Main Loop (The "Safe" Loop)
+ResetBtn.MouseButton1Click:Connect(function()
+    if LocalPlayer.Character then LocalPlayer.Character:BreakJoints() end
+end)
+
+-- Main Loop
 RunService.Stepped:Connect(function()
     local char = LocalPlayer.Character
     if not char then return end
+    
+    local hrp = char:FindFirstChild("HumanoidRootPart")
     
     -- God Mode Logic
     if GodMode then
         local hum = char:FindFirstChild("Humanoid")
         if hum then
-            hum.MaxHealth = 9e9 -- Sets Max Health to a massive number
-            hum.Health = 9e9    -- Sets Current Health to a massive number
+            hum.MaxHealth = 1000000 
+            hum.Health = 1000000
         end
     end
     
-    -- NoClip Logic
+    -- NoClip & Floor Logic
     if Noclip then
+        -- Make player parts non-collidable
         for _, part in pairs(char:GetDescendants()) do
             if part:IsA("BasePart") then
                 part.CanCollide = false
             end
+        end
+        
+        -- Keep the invisible floor under the player
+        if FakeFloor and hrp then
+            FakeFloor.CFrame = hrp.CFrame * CFrame.new(0, -3.5, 0)
         end
     end
 end)
