@@ -10,13 +10,13 @@ local FakeFloor = nil
 
 -- UI Creation
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-ScreenGui.Name = "GeminiMobileMenu"
+ScreenGui.Name = "GeminiAggressiveMenu"
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Size = UDim2.new(0, 200, 0, 220)
 MainFrame.Position = UDim2.new(0.1, 0, 0.3, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainFrame.Active = true
 MainFrame.Draggable = true 
 
@@ -24,8 +24,8 @@ local Corner = Instance.new("UICorner", MainFrame)
 
 local StatusLabel = Instance.new("TextLabel", MainFrame)
 StatusLabel.Size = UDim2.new(1, 0, 0, 30)
-StatusLabel.Text = "Status: God OFF"
-StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+StatusLabel.Text = "GOD STATUS: INACTIVE"
+StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
 StatusLabel.BackgroundTransparency = 1
 StatusLabel.Font = Enum.Font.SourceSansBold
 StatusLabel.TextSize = 14
@@ -43,50 +43,49 @@ local function createBtn(text, pos, color)
     return b
 end
 
-local GodBtn = createBtn("Toggle Anti-Death", UDim2.new(0, 10, 0, 40), Color3.fromRGB(70, 70, 70))
-local NoclipBtn = createBtn("Noclip: OFF", UDim2.new(0, 10, 0, 85), Color3.fromRGB(200, 50, 50))
-local TPBtn = createBtn("Get Click TP Tool", UDim2.new(0, 10, 0, 130), Color3.fromRGB(0, 120, 200))
-local ResetBtn = createBtn("Reset Character", UDim2.new(0, 10, 0, 175), Color3.fromRGB(50, 50, 50))
+local GodBtn = createBtn("Toggle God (Aggressive)", UDim2.new(0, 10, 0, 40), Color3.fromRGB(60, 60, 60))
+local NoclipBtn = createBtn("Noclip: OFF", UDim2.new(0, 10, 0, 85), Color3.fromRGB(180, 40, 40))
+local TPBtn = createBtn("Get Click TP Tool", UDim2.new(0, 10, 0, 130), Color3.fromRGB(0, 100, 180))
+local ResetBtn = createBtn("Reset Character", UDim2.new(0, 10, 0, 175), Color3.fromRGB(40, 40, 40))
 
---- ANTI-DEATH LOGIC ---
-local function ApplyAntiDeath(character)
-    local humanoid = character:WaitForChild("Humanoid")
-    humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-    
-    RunService.Stepped:Connect(function()
-        if GodMode and humanoid and humanoid.Parent then
-            if humanoid.Health <= 0 then
+--- AGGRESSIVE ANTI-DEATH CORE ---
+RunService.RenderStepped:Connect(function()
+    if GodMode and LocalPlayer.Character then
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            -- Spams state enable to fight server-side death triggers
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+            
+            if humanoid.Health <= 0.1 then
                 humanoid.Health = 100
                 humanoid:ChangeState(Enum.HumanoidStateType.Running)
             end
-            humanoid.MaxHealth = 1000000
-            humanoid.Health = 1000000
+            
+            -- Constantly forces health to a high value
+            humanoid.MaxHealth = 9e9
+            humanoid.Health = 9e9
         end
-    end)
-end
+    end
+end)
 
-if LocalPlayer.Character then ApplyAntiDeath(LocalPlayer.Character) end
-LocalPlayer.CharacterAdded:Connect(ApplyAntiDeath)
-
---- BUTTON FUNCTIONALITY ---
+--- BUTTON FUNCTIONS ---
 GodBtn.MouseButton1Click:Connect(function()
     GodMode = not GodMode
-    StatusLabel.Text = "Status: God " .. (GodMode and "ACTIVE" or "OFF")
-    StatusLabel.TextColor3 = GodMode and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
-    GodBtn.BackgroundColor3 = GodMode and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(70, 70, 70)
+    StatusLabel.Text = "GOD STATUS: " .. (GodMode and "ACTIVE (SPAMMING)" or "INACTIVE")
+    StatusLabel.TextColor3 = GodMode and Color3.fromRGB(50, 255, 50) or Color3.fromRGB(255, 50, 50)
+    GodBtn.BackgroundColor3 = GodMode and Color3.fromRGB(40, 120, 40) or Color3.fromRGB(60, 60, 60)
 end)
 
 NoclipBtn.MouseButton1Click:Connect(function()
     Noclip = not Noclip
     NoclipBtn.Text = "Noclip: " .. (Noclip and "ON" or "OFF")
-    NoclipBtn.BackgroundColor3 = Noclip and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+    NoclipBtn.BackgroundColor3 = Noclip and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(180, 40, 40)
     
     if Noclip then
         FakeFloor = Instance.new("Part")
-        FakeFloor.Name = "NoclipFloor"
-        FakeFloor.Size = Vector3.new(15, 1, 15)
+        FakeFloor.Name = "SafetyFloor"
+        FakeFloor.Size = Vector3.new(12, 1, 12)
         FakeFloor.Transparency = 1
-        FakeFloor.CanCollide = true
         FakeFloor.Anchored = true
         FakeFloor.Parent = workspace
     else
@@ -96,10 +95,9 @@ end)
 
 TPBtn.MouseButton1Click:Connect(function()
     if LocalPlayer.Backpack:FindFirstChild("Click TP") then return end
-    local Tool = Instance.new("Tool")
+    local Tool = Instance.new("Tool", LocalPlayer.Backpack)
     Tool.Name = "Click TP"
     Tool.RequiresHandle = false
-    Tool.Parent = LocalPlayer.Backpack
     Tool.Activated:Connect(function()
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
             LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(Mouse.Hit.p) + Vector3.new(0, 3, 0)
@@ -111,18 +109,18 @@ ResetBtn.MouseButton1Click:Connect(function()
     if LocalPlayer.Character then LocalPlayer.Character:BreakJoints() end
 end)
 
---- NO-FALL / NOCLIP LOOP ---
+--- NOCLIP / FLOOR LOOP ---
 RunService.Stepped:Connect(function()
     local char = LocalPlayer.Character
-    if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    
-    if Noclip then
-        for _, part in pairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = false end
-        end
-        if FakeFloor and hrp then
-            FakeFloor.CFrame = hrp.CFrame * CFrame.new(0, -3.5, 0)
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        local hrp = char.HumanoidRootPart
+        if Noclip then
+            for _, part in pairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
+            end
+            if FakeFloor then
+                FakeFloor.CFrame = hrp.CFrame * CFrame.new(0, -3.5, 0)
+            end
         end
     end
 end)
