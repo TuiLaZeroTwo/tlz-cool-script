@@ -1,122 +1,125 @@
+-- Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local player = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
 
--- Create the GUI via script to avoid "nil" errors
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "HeartFlightGui"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = player:WaitForChild("PlayerGui")
+-- Variables
+local Flying = false
+local Noclip = false
+local FlySpeed = 50
+local Camera = workspace.CurrentCamera
 
--- The Main Panel
-local mainPanel = Instance.new("Frame")
-mainPanel.Name = "MainPanel"
-mainPanel.Size = UDim2.new(0, 200, 0, 150)
-mainPanel.Position = UDim2.new(0.5, -100, 0.5, -75)
-mainPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-mainPanel.BorderSizePixel = 0
-mainPanel.Parent = screenGui
+-- UI Setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MobileSupportGui"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
 
-local uiCorner = Instance.new("UICorner")
-uiCorner.Parent = mainPanel
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 200, 0, 250)
+MainFrame.Position = UDim2.new(0.5, -100, 0.4, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true -- Legacy support (works on most mobile executors)
+MainFrame.Parent = ScreenGui
 
--- The Logo (Heart)
-local logoButton = Instance.new("TextButton")
-logoButton.Name = "LogoButton"
-logoButton.Size = UDim2.new(0, 60, 0, 60)
-logoButton.Position = UDim2.new(0, 10, 0, 10)
-logoButton.Text = "❤"
-logoButton.TextScaled = true
-logoButton.TextColor3 = Color3.fromRGB(255, 50, 50)
-logoButton.BackgroundTransparency = 1
-logoButton.Visible = false
-logoButton.Parent = screenGui
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+Title.Text = "Mobile Cheat Menu"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Parent = MainFrame
 
--- Minimize Button (Inside Panel)
-local minButton = Instance.new("TextButton")
-minButton.Size = UDim2.new(0, 30, 0, 30)
-minButton.Position = UDim2.new(1, -35, 0, 5)
-minButton.Text = "❤"
-minButton.TextColor3 = Color3.fromRGB(255, 50, 50)
-minButton.BackgroundTransparency = 1
-minButton.Parent = mainPanel
+-- Helper Function for Buttons
+local function createButton(name, pos, text, color)
+    local btn = Instance.new("TextButton")
+    btn.Name = name
+    btn.Size = UDim2.new(0, 180, 0, 40)
+    btn.Position = pos
+    btn.BackgroundColor3 = color
+    btn.Text = text
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 18
+    btn.Parent = MainFrame
+    return btn
+end
 
--- Flight Toggle
-local flightBtn = Instance.new("TextButton")
-flightBtn.Size = UDim2.new(0, 160, 0, 40)
-flightBtn.Position = UDim2.new(0.5, -80, 0.3, 0)
-flightBtn.Text = "Flight: OFF"
-flightBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-flightBtn.Parent = mainPanel
+local FlyBtn = createButton("FlyBtn", UDim2.new(0.05, 0, 0.2, 0), "Flight: OFF", Color3.fromRGB(200, 50, 50))
+local NoclipBtn = createButton("NoclipBtn", UDim2.new(0.05, 0, 0.4, 0), "NoClip: OFF", Color3.fromRGB(200, 50, 50))
+local SpeedUpBtn = createButton("SpeedUp", UDim2.new(0.05, 0, 0.6, 0), "Speed: " .. FlySpeed, Color3.fromRGB(70, 70, 70))
+local CloseBtn = createButton("Close", UDim2.new(0.05, 0, 0.8, 0), "Minimize", Color3.fromRGB(50, 50, 50))
 
--- Noclip Toggle
-local noclipBtn = Instance.new("TextButton")
-noclipBtn.Size = UDim2.new(0, 160, 0, 40)
-noclipBtn.Position = UDim2.new(0.5, -80, 0.65, 0)
-noclipBtn.Text = "Noclip: OFF"
-noclipBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-noclipBtn.Parent = mainPanel
+--- Logic Functions ---
 
----------------- PHYSICS LOGIC ----------------
-
-local FLYING = false
-local NOCLIP = false
-local FLY_SPEED = 50
-
-local character = player.Character or player.CharacterAdded:Wait()
-local rootPart = character:WaitForChild("HumanoidRootPart")
-local humanoid = character:WaitForChild("Humanoid")
-
-local attachment = Instance.new("Attachment", rootPart)
-local linearVelocity = Instance.new("LinearVelocity", rootPart)
-local alignOrientation = Instance.new("AlignOrientation", rootPart)
-
-linearVelocity.Attachment0 = attachment
-linearVelocity.MaxForce = 0
-alignOrientation.Attachment0 = attachment
-alignOrientation.Mode = Enum.OrientationAlignmentMode.OneAttachment
-alignOrientation.MaxTorque = 0
-
-minButton.Activated:Connect(function()
-	mainPanel.Visible = false
-	logoButton.Visible = true
+-- Toggle Flight
+FlyBtn.MouseButton1Click:Connect(function()
+    Flying = not Flying
+    FlyBtn.Text = "Flight: " .. (Flying and "ON" or "OFF")
+    FlyBtn.BackgroundColor3 = Flying and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+    
+    if Flying then
+        local bv = Instance.new("BodyVelocity")
+        bv.Name = "FlightVelocity"
+        bv.Velocity = Vector3.new(0,0,0)
+        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bv.Parent = LocalPlayer.Character:WaitForChild("HumanoidRootPart")
+        
+        local bg = Instance.new("BodyGyro")
+        bg.Name = "FlightGyro"
+        bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        bg.P = 9000
+        bg.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
+        bg.Parent = LocalPlayer.Character.HumanoidRootPart
+        
+        LocalPlayer.Character.Humanoid.PlatformStand = true
+    else
+        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            if hrp:FindFirstChild("FlightVelocity") then hrp.FlightVelocity:Destroy() end
+            if hrp:FindFirstChild("FlightGyro") then hrp.FlightGyro:Destroy() end
+        end
+        LocalPlayer.Character.Humanoid.PlatformStand = false
+    end
 end)
 
-logoButton.Activated:Connect(function()
-	mainPanel.Visible = true
-	logoButton.Visible = false
+-- Toggle NoClip
+NoclipBtn.MouseButton1Click:Connect(function()
+    Noclip = not Noclip
+    NoclipBtn.Text = "NoClip: " .. (Noclip and "ON" or "OFF")
+    NoclipBtn.BackgroundColor3 = Noclip and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
 end)
 
-flightBtn.Activated:Connect(function()
-	FLYING = not FLYING
-	flightBtn.Text = FLYING and "Flight: ON" or "Flight: OFF"
-	flightBtn.BackgroundColor3 = FLYING and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80)
-	humanoid:ChangeState(FLYING and Enum.HumanoidStateType.Physics or Enum.HumanoidStateType.GettingUp)
+-- Modify Speed
+SpeedUpBtn.MouseButton1Click:Connect(function()
+    FlySpeed = FlySpeed + 25
+    if FlySpeed > 250 then FlySpeed = 25 end
+    SpeedUpBtn.Text = "Speed: " .. FlySpeed
 end)
 
-noclipBtn.Activated:Connect(function()
-	NOCLIP = not NOCLIP
-	noclipBtn.Text = NOCLIP and "Noclip: ON" or "Noclip: OFF"
-	noclipBtn.BackgroundColor3 = NOCLIP and Color3.fromRGB(80, 255, 80) or Color3.fromRGB(255, 80, 80)
+-- Close/Minimize
+CloseBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
 end)
 
+-- Flight & NoClip Loop
 RunService.Stepped:Connect(function()
-	if NOCLIP and character then
-		for _, part in ipairs(character:GetDescendants()) do
-			if part:IsA("BasePart") then part.CanCollide = false end
-		end
-	end
-end)
-
-RunService.RenderStepped:Connect(function()
-	if FLYING then
-		local camera = workspace.CurrentCamera
-		linearVelocity.MaxForce = 9999999
-		alignOrientation.MaxTorque = 9999999
-		alignOrientation.CFrame = camera.CFrame
-		linearVelocity.VectorVelocity = (humanoid.MoveDirection.Magnitude > 0) and (camera.CFrame.LookVector * FLY_SPEED) or Vector3.zero
-	else
-		linearVelocity.MaxForce = 0
-		alignOrientation.MaxTorque = 0
-	end
+    if Flying and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = LocalPlayer.Character.HumanoidRootPart
+        local moveDir = LocalPlayer.Character.Humanoid.MoveDirection
+        
+        hrp.FlightVelocity.Velocity = (Camera.CFrame.LookVector * moveDir.Z + Camera.CFrame.RightVector * moveDir.X) * FlySpeed
+        hrp.FlightGyro.CFrame = Camera.CFrame
+    end
+    
+    if Noclip then
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
 end)
