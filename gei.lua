@@ -6,13 +6,19 @@ local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local rootPart = character:WaitForChild("HumanoidRootPart")
 
--- SAFETY CHECK: Wait for UI elements to exist
+-- Fix for Error 11: We use a loop to wait for the GUI to actually exist
 local gui = script.Parent
-local mainPanel = gui:WaitForChild("MainPanel", 10)
-local logoButton = gui:WaitForChild("LogoButton", 10)
+while not gui:IsA("ScreenGui") do 
+	gui = gui.Parent 
+	task.wait() 
+end
+
+-- Strictly wait for your specific names
+local mainPanel = gui:WaitForChild("MainPanel", 20)
+local logoButton = gui:WaitForChild("LogoButton", 20)
 
 if not mainPanel or not logoButton then
-	warn("GUI elements not found! Check your names in the Explorer.")
+	warn("Check your names! MainPanel or LogoButton is missing.")
 	return
 end
 
@@ -21,50 +27,35 @@ local noclipBtn = mainPanel:WaitForChild("NoclipToggle")
 local minBtn = mainPanel:WaitForChild("MinButton")
 
 -- Variables
-local FLYING = false
-local NOCLIP = false
+local FLYING, NOCLIP = false, false
 local FLY_SPEED = 50
 
--- Physics Setup
-local attachment = Instance.new("Attachment")
-local linearVelocity = Instance.new("LinearVelocity")
-local alignOrientation = Instance.new("AlignOrientation")
+-- Physics
+local attachment = Instance.new("Attachment", rootPart)
+local linearVelocity = Instance.new("LinearVelocity", rootPart)
+local alignOrientation = Instance.new("AlignOrientation", rootPart)
 
-attachment.Parent = rootPart
 linearVelocity.Attachment0 = attachment
 linearVelocity.MaxForce = 0
-linearVelocity.Parent = rootPart
-
 alignOrientation.Attachment0 = attachment
 alignOrientation.Mode = Enum.OrientationAlignmentMode.OneAttachment
 alignOrientation.MaxTorque = 0
-alignOrientation.Responsiveness = 200
-alignOrientation.Parent = rootPart
 
--- Flight Logic
+-- Toggle Functions
 local function toggleFlight()
 	FLYING = not FLYING
-	if FLYING then
-		flightBtn.Text = "Flight: ON"
-		flightBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
-		humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-	else
-		flightBtn.Text = "Flight: OFF"
-		flightBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
-		humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-		linearVelocity.MaxForce = 0
-		alignOrientation.MaxTorque = 0
-	end
+	flightBtn.Text = FLYING and "Flight: ON" or "Flight: OFF"
+	flightBtn.BackgroundColor3 = FLYING and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 100, 100)
+	humanoid:ChangeState(FLYING and Enum.HumanoidStateType.Physics or Enum.HumanoidStateType.GettingUp)
 end
 
--- Noclip Logic
 local function toggleNoclip()
 	NOCLIP = not NOCLIP
 	noclipBtn.Text = NOCLIP and "Noclip: ON" or "Noclip: OFF"
 	noclipBtn.BackgroundColor3 = NOCLIP and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 100, 100)
 end
 
--- GUI Interactivity (Heart Buttons)
+-- Heart Button Logic
 minBtn.Activated:Connect(function()
 	mainPanel.Visible = false
 	logoButton.Visible = true
@@ -78,13 +69,11 @@ end)
 flightBtn.Activated:Connect(toggleFlight)
 noclipBtn.Activated:Connect(toggleNoclip)
 
--- Loops
+-- Physics Loops
 RunService.Stepped:Connect(function()
 	if NOCLIP and character then
 		for _, part in pairs(character:GetDescendants()) do
-			if part:IsA("BasePart") then
-				part.CanCollide = false
-			end
+			if part:IsA("BasePart") then part.CanCollide = false end
 		end
 	end
 end)
@@ -93,13 +82,11 @@ RunService.RenderStepped:Connect(function()
 	if FLYING then
 		local camera = workspace.CurrentCamera
 		linearVelocity.MaxForce = math.huge
+		linearVelocity.VectorVelocity = (humanoid.MoveDirection.Magnitude > 0) and (camera.CFrame.LookVector * FLY_SPEED) or Vector3.zero
 		alignOrientation.MaxTorque = math.huge
-		
-		if humanoid.MoveDirection.Magnitude > 0 then
-			linearVelocity.VectorVelocity = camera.CFrame.LookVector * FLY_SPEED
-		else
-			linearVelocity.VectorVelocity = Vector3.new(0, 0, 0)
-		end
 		alignOrientation.CFrame = camera.CFrame
+	else
+		linearVelocity.MaxForce = 0
+		alignOrientation.MaxTorque = 0
 	end
 end)
