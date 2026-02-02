@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService") -- Used for the bypass
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
@@ -8,27 +9,18 @@ local GodMode = false
 local Noclip = false
 local FakeFloor = nil
 
--- UI Creation
+-- UI Setup
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-ScreenGui.Name = "GeminiCelestialMenu"
+ScreenGui.Name = "GeminiBypassMenu"
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 200, 0, 270) -- Increased size for new button
+MainFrame.Size = UDim2.new(0, 200, 0, 270)
 MainFrame.Position = UDim2.new(0.1, 0, 0.3, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainFrame.Active = true
 MainFrame.Draggable = true 
-
-local Corner = Instance.new("UICorner", MainFrame)
-
-local StatusLabel = Instance.new("TextLabel", MainFrame)
-StatusLabel.Size = UDim2.new(1, 0, 0, 30)
-StatusLabel.Text = "GOD STATUS: INACTIVE"
-StatusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.Font = Enum.Font.SourceSansBold
-StatusLabel.TextSize = 14
+Instance.new("UICorner", MainFrame)
 
 local function createBtn(text, pos, color)
     local b = Instance.new("TextButton", MainFrame)
@@ -46,45 +38,60 @@ end
 local GodBtn = createBtn("Toggle God (Aggressive)", UDim2.new(0, 10, 0, 40), Color3.fromRGB(60, 60, 60))
 local NoclipBtn = createBtn("Noclip: OFF", UDim2.new(0, 10, 0, 85), Color3.fromRGB(180, 40, 40))
 local TPBtn = createBtn("Get Click TP Tool", UDim2.new(0, 10, 0, 130), Color3.fromRGB(0, 100, 180))
-local CelestialBtn = createBtn("Teleport: Celestial", UDim2.new(0, 10, 0, 175), Color3.fromRGB(100, 50, 150)) -- Purple button
+local CelestialBtn = createBtn("TP Celestial (Bypass)", UDim2.new(0, 10, 0, 175), Color3.fromRGB(100, 50, 150))
 local ResetBtn = createBtn("Reset Character", UDim2.new(0, 10, 0, 220), Color3.fromRGB(40, 40, 40))
 
---- CELESTIAL TELEPORT LOGIC ---
-CelestialBtn.MouseButton1Click:Connect(function()
-    local targetName = "Celestial"
-    local target = workspace:FindFirstChild(targetName, true) -- The 'true' allows it to search inside folders
+--- BYPASS TELEPORT LOGIC ---
+local function bypassTeleport(targetPos)
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    -- Temporary NoClip so you don't hit walls during the glide
+    local oldNoclip = Noclip
+    Noclip = true
+
+    local distance = (hrp.Position - targetPos).Magnitude
+    local speed = 150 -- Adjust this (higher = faster, lower = safer from bans)
+    local duration = distance / speed
+
+    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(targetPos) + Vector3.new(0, 5, 0)})
     
-    if target and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+    tween:Play()
+    tween.Completed:Connect(function()
+        Noclip = oldNoclip -- Restore previous Noclip state
+    end)
+end
+
+CelestialBtn.MouseButton1Click:Connect(function()
+    local target = workspace:FindFirstChild("Celestial", true)
+    if target then
         local pos = target:IsA("BasePart") and target.Position or target:FindFirstChildWhichIsA("BasePart").Position
-        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(pos) + Vector3.new(0, 5, 0)
+        bypassTeleport(pos)
     else
         CelestialBtn.Text = "Area Not Found!"
         task.wait(1)
-        CelestialBtn.Text = "Teleport: Celestial"
+        CelestialBtn.Text = "TP Celestial (Bypass)"
     end
 end)
 
---- AGGRESSIVE ANTI-DEATH CORE ---
+--- AGGRESSIVE ANTI-DEATH ---
 RunService.RenderStepped:Connect(function()
     if GodMode and LocalPlayer.Character then
-        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-            if humanoid.Health <= 0.1 then
-                humanoid.Health = 100
-                humanoid:ChangeState(Enum.HumanoidStateType.Running)
-            end
-            humanoid.MaxHealth = 9e9
-            humanoid.Health = 9e9
+        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+            if hum.Health <= 0.1 then hum.Health = 100 hum:ChangeState(Enum.HumanoidStateType.Running) end
+            hum.MaxHealth = 9e9
+            hum.Health = 9e9
         end
     end
 end)
 
---- BUTTON FUNCTIONS (God, Noclip, TP) ---
+--- OTHER BUTTONS ---
 GodBtn.MouseButton1Click:Connect(function()
     GodMode = not GodMode
-    StatusLabel.Text = "GOD STATUS: " .. (GodMode and "ACTIVE (SPAMMING)" or "INACTIVE")
-    StatusLabel.TextColor3 = GodMode and Color3.fromRGB(50, 255, 50) or Color3.fromRGB(255, 50, 50)
     GodBtn.BackgroundColor3 = GodMode and Color3.fromRGB(40, 120, 40) or Color3.fromRGB(60, 60, 60)
 end)
 
@@ -92,27 +99,20 @@ NoclipBtn.MouseButton1Click:Connect(function()
     Noclip = not Noclip
     NoclipBtn.Text = "Noclip: " .. (Noclip and "ON" or "OFF")
     NoclipBtn.BackgroundColor3 = Noclip and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(180, 40, 40)
-    
     if Noclip then
         FakeFloor = Instance.new("Part", workspace)
-        FakeFloor.Name = "SafetyFloor"
         FakeFloor.Size = Vector3.new(12, 1, 12)
         FakeFloor.Transparency = 1
         FakeFloor.Anchored = true
-    else
-        if FakeFloor then FakeFloor:Destroy() FakeFloor = nil end
-    end
+    elseif FakeFloor then FakeFloor:Destroy() FakeFloor = nil end
 end)
 
 TPBtn.MouseButton1Click:Connect(function()
-    if LocalPlayer.Backpack:FindFirstChild("Click TP") then return end
     local Tool = Instance.new("Tool", LocalPlayer.Backpack)
-    Tool.Name = "Click TP"
+    Tool.Name = "Bypass Click TP"
     Tool.RequiresHandle = false
     Tool.Activated:Connect(function()
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(Mouse.Hit.p) + Vector3.new(0, 3, 0)
-        end
+        bypassTeleport(Mouse.Hit.p) -- Uses bypass for click TP too!
     end)
 end)
 
@@ -120,18 +120,13 @@ ResetBtn.MouseButton1Click:Connect(function()
     if LocalPlayer.Character then LocalPlayer.Character:BreakJoints() end
 end)
 
---- NOCLIP / FLOOR LOOP ---
 RunService.Stepped:Connect(function()
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        local hrp = char.HumanoidRootPart
-        if Noclip then
-            for _, part in pairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = false end
-            end
-            if FakeFloor then
-                FakeFloor.CFrame = hrp.CFrame * CFrame.new(0, -3.5, 0)
-            end
+    if Noclip and LocalPlayer.Character then
+        for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
+            if v:IsA("BasePart") then v.CanCollide = false end
+        end
+        if FakeFloor and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            FakeFloor.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, -3.5, 0)
         end
     end
 end)
